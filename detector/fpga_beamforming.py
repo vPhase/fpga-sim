@@ -17,17 +17,11 @@ def doFPGABeamForming(wfms, subbeam0=True, subbeam1=False, subbeam2=False):
         _coherent_sums_1 = np.zeros(len(wfms[0]))
         _coherent_sums_2 = np.zeros(len(wfms[0]))
         for j in range(geometry.nantenna):
-            if subbeam0:
-                if cfg.subbeam_0_codes[j] == 99:
-                    continue
+            if subbeam0 and cfg.subbeam_0_codes[j] != 99:
                 _coherent_sums_0 += np.roll(wfms[j], cfg.subbeam_0_delays[i]*cfg.subbeam_0_codes[j])
-            if subbeam1:
-                if cfg.subbeam_1_codes[j] == 99:
-                    continue
+            if subbeam1 and cfg.subbeam_1_codes[j] != 99:
                 _coherent_sums_1 += np.roll(wfms[j], cfg.subbeam_1_delays[i]*cfg.subbeam_1_codes[j])
-            if subbeam2:
-                if cfg.subbeam_2_codes[j] == 99:
-                    continue
+            if subbeam2 and cfg.subbeam_2_codes[j] != 99:
                 _coherent_sums_2 += np.roll(wfms[j], cfg.subbeam_2_delays[i]*cfg.subbeam_2_codes[j])
                 
         coherent_sums_0.append(_coherent_sums_0)

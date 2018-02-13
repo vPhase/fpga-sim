@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 ICE=True
 n_ice = 1.78
@@ -10,6 +11,13 @@ if ICE:
 nantenna=7 #8
 antenna_spacing_closest = 1 #m
 antenna_depth = 200. #m   
+
+def euclideanDistance2D(r1, r2):
+    distance = math.sqrt(pow((r2[0]-r1[0]) ,2) + pow((r2[1]-r1[1]) ,2))
+    return distance
+
+def timeDifference(distance):
+    return distance / c_light
 
 def getTheta(delay, spacing=None):
     if spacing == None:
@@ -26,6 +34,13 @@ antenna_location= [0,1,2,3,4,6,8]
 #r_ant=np.zeros(nantenna, dtype=float)
 
 #phi_ant=np.zeros(nantenna, dtype=float)
+
+z_ant = -1. * np.array(antenna_location)
+x_ant = np.zeros(len(antenna_location))
+
+#A5 cal pulser location, relative to z_ant, x_ant
+z_cal_pulser = -2.0
+x_cal_pulser = 49.0
 
 #vertical position, meters
 #z_ant=np.arange(-1.*antenna_depth, -1*antenna_depth+nantenna*antenna_spacing)[::-1]
