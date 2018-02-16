@@ -6,7 +6,7 @@ import setup
 import detector.fpga_beamforming as beamform
 
 import math
-#import tools.myplot
+import tools.myplot
 import matplotlib.pyplot as plt
 import numpy
 import copy
@@ -43,9 +43,9 @@ if cfg.ADD_IMPULSE:
         v= numpy.loadtxt(cfg.TXT_TEMPLATE_FILE)
         impulse = waveform.Waveform(v[:,1],v[:,0])
 
-    impulse_vpp=(numpy.max(impulse.voltage)-numpy.min(impulse.voltage))
+        impulse_vpp=(numpy.max(impulse.voltage)-numpy.min(impulse.voltage))
     impulse.voltage /= impulse_vpp/2.0 #normalize
-
+    
 #define noise in frequency domain
 if cfg.NOISE:
     print 'generating noise traces...'
@@ -140,7 +140,7 @@ for snr in cfg.snr_array:
             event_data.append(event_wfms)
             
         #for jj in range(geometry.nantenna):
-        #    plt.plot(event_data[jj] - 1*jj)
+        #    plt.plot(event_data[jj] - 60*jj)
         #plt.show()
 
         #-- do beamforming here
