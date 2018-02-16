@@ -42,8 +42,10 @@ if cfg.ADD_IMPULSE:
     elif cfg.USE_TXT_TEMPLATE:
         v= numpy.loadtxt(cfg.TXT_TEMPLATE_FILE)
         impulse = waveform.Waveform(v[:,1],v[:,0])
+        impulse.fft()
+        impulse.upsampleFreqDomain(cfg.UPSAMPLE_FACTOR)
 
-        impulse_vpp=(numpy.max(impulse.voltage)-numpy.min(impulse.voltage))
+    impulse_vpp=(numpy.max(impulse.voltage)-numpy.min(impulse.voltage))
     impulse.voltage /= impulse_vpp/2.0 #normalize
     
 #define noise in frequency domain
@@ -114,6 +116,11 @@ for snr in cfg.snr_array:
                     impulse_copy.voltage = numpy.roll(impulse_copy.voltage,cfg.STAGGER_DELAY*geometry.antenna_location[jj])
                 #-- downsample to match thermal noise / digitizer sampling rate
                 impulse_copy.downsampleTimeDomain(cfg.DOWNSAMPLE_FACTOR)
+                if len(impulse_copy.voltage) < cfg.WFM_LENGTH:
+                    impulse_copy.zeropad(cfg.WFM_LENGTH)
+                    #plt.plot(impulse_copy.time, impulse_copy.voltage)
+                    #plt.show()
+
                 impulse_copy.takeWindow([0,cfg.WFM_LENGTH])
                 if cfg.USE_ANTENNA_MODEL:
                     if cfg.THROW_CAL_PULSER:
@@ -139,9 +146,9 @@ for snr in cfg.snr_array:
             
             event_data.append(event_wfms)
             
-        #for jj in range(geometry.nantenna):
-        #    plt.plot(event_data[jj] - 60*jj)
-        #plt.show()
+        for jj in range(geometry.nantenna):
+            plt.plot(event_data[jj] - 60*jj)
+        plt.show()
 
         #-- do beamforming here
         beams = beamform.doFPGABeamForming(event_data, cfg.SUBBEAM_0, cfg.SUBBEAM_1, cfg.SUBBEAM_2)

@@ -36,16 +36,16 @@ class Waveform:
         if pad_length <= self.n:
             return None
 
-        half_pad_length = int(np.floor((pad_length - self.n) / 2))
+        half_pad_length = int(numpy.floor((pad_length - self.n) / 2))
 
-        self.voltage = np.hstack((np.zeros(half_pad_length), self.voltage, np.zeros(half_pad_length)))
+        self.voltage = numpy.hstack((numpy.zeros(half_pad_length), self.voltage, numpy.zeros(half_pad_length)))
 
         #if pad_length is odd, add extra zeros:
         while(len(self.voltage) < pad_length):
-            self.voltage = np.hstack((np.zeros(1), self.voltage, np.zeros(1)))
+            self.voltage = numpy.hstack((np.zeros(1), self.voltage, np.zeros(1)))
 
         self.n = len(self.voltage)
-        self.time = np.linspace(0, self.n * self.dt, self.n)
+        self.time = numpy.linspace(0, self.n * self.dt, self.n)
         
     def fft(self, window_function=None):
 
@@ -69,7 +69,8 @@ class Waveform:
         self.voltage = factor/2.0 * numpy.fft.irfft(self.ampl) 
         self.n = len(self.voltage)
         self.time  = numpy.arange(0., self.n/( 2.*new_nyquist_ghz), 1/( 2.*new_nyquist_ghz))
-
+        self.dt=self.time[1]-self.time[0]
+        
     def upsampleTimeDomain(self, factor, kind='linear'):
 
         new_time = numpy.arange(self.time[0], 
