@@ -42,8 +42,8 @@ if cfg.ADD_IMPULSE:
     elif cfg.USE_TXT_TEMPLATE:
         v= numpy.loadtxt(cfg.TXT_TEMPLATE_FILE)
         impulse = waveform.Waveform(v[:,1],v[:,0])
-        impulse.fft()
-        impulse.upsampleFreqDomain(cfg.UPSAMPLE_FACTOR)
+        #impulse.fft()
+        #impulse.upsampleFreqDomain(cfg.UPSAMPLE_FACTOR)
 
     impulse_vpp=(numpy.max(impulse.voltage)-numpy.min(impulse.voltage))
     impulse.voltage /= impulse_vpp/2.0 #normalize
@@ -192,11 +192,11 @@ for snr in cfg.snr_array:
         if cfg.SAVE_POWERSUMS:
             all_fpga_power.append(total_fpga_power)
 
-        event_dict[snr][i]['theta'] = thetas[i]
-        #if cfg.THROW_CAL_PULSER:
-        #    event_dict[snr][i]['theta'] = thetas[i]
-        #elif cfg.THROW_ELEVATION:
-        #    event_dict[snr][i]['theta'] = thetas[i]
+        if cfg.THROW_CAL_PULSER:
+            event_dict[snr][i]['theta'] = thetas[i]
+            event_dict[snr][i]['depth'] = z_cal_pulser[i]
+        elif cfg.THROW_ELEVATION:
+            event_dict[snr][i]['theta'] = thetas[i]
         #else:
         #    event_dict[snr][i]['theta'] = theta_static
 
