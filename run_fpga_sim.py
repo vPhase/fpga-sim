@@ -55,6 +55,53 @@ if cfg.NOISE:
                                        filter_order=(3,4), time_domain_sampling_rate=cfg.time_domain_sampling_rate)
     noise_traces = thermal_noise.makeNoiseWaveform(ntraces=cfg.nevent*geometry.nantenna)
 
+#--------------------------------------------------------------------------
+#-- get delays from point-source emitter
+if cfg.THROW_CAL_PULSER:
+
+    if cfg.DROP_CAL_PULSER:
+        z_cal_pulser = numpy.sort(numpy.repeat(cfg.cal_pulser_z_array, int(math.ceil(float(cfg.nevent) / len(cfg.cal_pulser_z_array))) )[0:cfg.nevent])
+    else:
+        z_cal_pulser = numpy.ones(len(cfg.nevent),dtype=numpy.float) * geometry.z_cal_pulser 
+
+    thetas=[]
+    delay_i = []
+    for ev in range(cfg.nevent):
+        _thetas=[]
+        point_source_time_delays=[]
+        for j in range(geometry.nantenna):
+            point_source_time_delays.append(
+                geometry.timeDifference(geometry.euclideanDistance2D(
+                    (z_cal_pulser[ev], geometry.x_cal_pulser),
+                    (geometry.z_ant[j], geometry.x_ant[j]) )))
+
+            if j > 0:
+                ##dumb way to make sure len(_thetas) == nantenna
+                if j ==1:
+                    _thetas.append(geometry.getTheta((point_source_time_delays[j]-point_source_time_delays[j-1]), spacing=abs(geometry.z_ant[j]-geometry.z_ant[j-1])))
+                _thetas.append(geometry.getTheta((point_source_time_delays[j]-point_source_time_delays[j-1]), spacing=abs(geometry.z_ant[j]-geometry.z_ant[j-1])))
+
+        thetas.append(_thetas)
+        point_source_time_delays=numpy.array(point_source_time_delays)-min(point_source_time_delays)
+        delay_i.append(numpy.round(point_source_time_delays / impulse.dt))
+
+    #thetas=numpy.array(thetas)
+    delay_i=numpy.array(delay_i)
+    
+#-- otherwise, send perfect plane wave
+else:
+    delay_i = numpy.ones(cfg.nevent) * int(cfg.theta_i)
+    if not cfg.THROW_ELEVATION and cfg.ADD_IMPULSE:
+        theta_static = geometry.getTheta(delay_i*impulse.dt)[0]
+
+    thetas=numpy.zeros(cfg.nevent)
+    if cfg.THROW_ELEVATION and cfg.ADD_IMPULSE:
+        #-- throw random delays, save the associated theta value
+        delay_i = numpy.random.randint(cfg.THROW_DELAY_LO, cfg.THROW_DELAY_HI, size=cfg.nevent) * 1
+        delay_i = numpy.sort(delay_i)
+        thetas = geometry.getTheta(delay_i*impulse.dt)
+#--------------------------------------------------------------------------
+
 #simulate..
 event_dict={}
 all_fpga_power=[]
@@ -63,35 +110,6 @@ for snr in cfg.snr_array:
     event_dict[snr]={}
     if cfg.NOISE:
         print "snr = ", snr
-
-    #-- get delays from point-source emitter
-    if cfg.THROW_CAL_PULSER:
-        point_source_time_delays=[]
-        thetas=[]
-        for j in range(geometry.nantenna):
-            point_source_time_delays.append(
-                geometry.timeDifference(geometry.euclideanDistance2D(
-                    (geometry.z_cal_pulser, geometry.x_cal_pulser),
-                    (geometry.z_ant[j], geometry.x_ant[j]) )))
-
-            if j > 0:
-                thetas.append(geometry.getTheta(point_source_time_delays[j]-point_source_time_delays[j-1]))
-
-        point_source_time_delays=numpy.array(point_source_time_delays)-min(point_source_time_delays)
-        delay_i = numpy.round(point_source_time_delays / impulse.dt)
-        
-    #-- otherwise, send perfect plane wave
-    else:
-        delay_i = numpy.ones(cfg.nevent) * int(cfg.theta_i)
-        if not cfg.THROW_ELEVATION and cfg.ADD_IMPULSE:
-            theta_static = geometry.getTheta(delay_i*impulse.dt)[0]
-
-        thetas=numpy.zeros(cfg.nevent)
-        if cfg.THROW_ELEVATION and cfg.ADD_IMPULSE:
-            #-- throw random delays, save the associated theta value
-            delay_i = numpy.random.randint(cfg.THROW_DELAY_LO, cfg.THROW_DELAY_HI, size=cfg.nevent) * 1
-            delay_i = numpy.sort(delay_i)
-            thetas = geometry.getTheta(delay_i*impulse.dt)
     
     for i in range(cfg.nevent):
         event_dict[snr][i]={}
@@ -108,7 +126,7 @@ for snr in cfg.snr_array:
                 impulse_copy=copy.copy(impulse)
                 #-- apply pulse time-delay here
                 if cfg.THROW_CAL_PULSER:
-                    impulse_copy.voltage=numpy.roll(impulse_copy.voltage,int(delay_i[jj]))
+                    impulse_copy.voltage=numpy.roll(impulse_copy.voltage,int(delay_i[i,jj]))
                 else:
                     impulse_copy.voltage=numpy.roll(impulse_copy.voltage,int(delay_i[i])*geometry.antenna_location[jj])
                 #-- add stagger delay, if specified
@@ -124,7 +142,7 @@ for snr in cfg.snr_array:
                 impulse_copy.takeWindow([0,cfg.WFM_LENGTH])
                 if cfg.USE_ANTENNA_MODEL:
                     if cfg.THROW_CAL_PULSER:
-                        impulse_copy.voltage = impulse_copy.voltage * abs(math.cos(thetas[jj]))
+                        impulse_copy.voltage = impulse_copy.voltage * abs(math.cos(thetas[i][jj]))
                     else:
                         impulse_copy.voltage = impulse_copy.voltage * abs(math.cos(thetas[i]))
 
@@ -146,9 +164,9 @@ for snr in cfg.snr_array:
             
             event_data.append(event_wfms)
             
-        for jj in range(geometry.nantenna):
-            plt.plot(event_data[jj] - 60*jj)
-        plt.show()
+        #for jj in range(geometry.nantenna):
+        #    plt.plot(event_data[jj] - 60*jj)
+        #plt.show()
 
         #-- do beamforming here
         beams = beamform.doFPGABeamForming(event_data, cfg.SUBBEAM_0, cfg.SUBBEAM_1, cfg.SUBBEAM_2)
@@ -174,10 +192,11 @@ for snr in cfg.snr_array:
         if cfg.SAVE_POWERSUMS:
             all_fpga_power.append(total_fpga_power)
 
-        if cfg.THROW_CAL_PULSER:
-            event_dict[snr][i]['theta'] = thetas
-        elif cfg.THROW_ELEVATION:
-            event_dict[snr][i]['theta'] = thetas[i]
+        event_dict[snr][i]['theta'] = thetas[i]
+        #if cfg.THROW_CAL_PULSER:
+        #    event_dict[snr][i]['theta'] = thetas[i]
+        #elif cfg.THROW_ELEVATION:
+        #    event_dict[snr][i]['theta'] = thetas[i]
         #else:
         #    event_dict[snr][i]['theta'] = theta_static
 
